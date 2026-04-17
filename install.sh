@@ -25,7 +25,7 @@ skipped() { echo -e "  ${CYAN}⤼${RESET} $1 — skipped"; }
 section() { echo -e "\n${BOLD}$1${RESET}"; }
 
 # ---- Config ------------------------------------------------
-GITHUB_REPO="https://github.com/maroofsiddiqui1-droid/1mg-claude-code-toolkit.git"
+GITHUB_REPO="maroofsiddiqui1-droid/1mg-claude-code-toolkit"
 INSTALL_DIR="$HOME/1mg-claude-code"
 TOOLKIT_DIR="$INSTALL_DIR/claude-pm-toolkit"
 WORKSPACE_DIR="$INSTALL_DIR/claude-workspace"
@@ -54,7 +54,7 @@ echo ""
 # ============================================================
 # STEP 1 — Homebrew
 # ============================================================
-section "Step 1/6 — Homebrew"
+section "Step 1/7 — Homebrew"
 
 if command -v brew &> /dev/null; then
     ok "Homebrew already installed"
@@ -80,7 +80,7 @@ fi
 # ============================================================
 # STEP 2 — Node.js
 # ============================================================
-section "Step 2/6 — Node.js"
+section "Step 2/7 — Node.js"
 
 MIN_NODE_MAJOR=18
 
@@ -110,7 +110,7 @@ fi
 # ============================================================
 # STEP 3 — Git
 # ============================================================
-section "Step 3/6 — Git"
+section "Step 3/7 — Git"
 
 if command -v git &> /dev/null; then
     ok "Git already installed ($(git --version))"
@@ -125,9 +125,40 @@ else
 fi
 
 # ============================================================
-# STEP 4 — VS Code
+# STEP 4 — GitHub CLI (gh)
 # ============================================================
-section "Step 4/6 — VS Code"
+section "Step 4/7 — GitHub CLI"
+
+if command -v gh &> /dev/null; then
+    ok "GitHub CLI already installed ($(gh --version | head -1))"
+    if ! gh auth status &> /dev/null; then
+        if confirm "GitHub CLI is installed but you're not logged in. Log in now?"; then
+            info "Opening GitHub in your browser to authenticate..."
+            gh auth login --web < /dev/tty
+            ok "GitHub authenticated"
+        else
+            skipped "GitHub login"
+        fi
+    else
+        ok "GitHub already authenticated"
+    fi
+else
+    if confirm "GitHub CLI is not installed. Install and log in now? (needed to clone the private toolkit repo)"; then
+        info "Installing GitHub CLI..."
+        brew install gh
+        ok "GitHub CLI installed"
+        info "Opening GitHub in your browser to authenticate..."
+        gh auth login --web < /dev/tty
+        ok "GitHub authenticated"
+    else
+        skipped "GitHub CLI"
+    fi
+fi
+
+# ============================================================
+# STEP 5 — VS Code
+# ============================================================
+section "Step 5/7 — VS Code"
 
 if command -v code &> /dev/null; then
     ok "VS Code already installed"
@@ -142,9 +173,9 @@ else
 fi
 
 # ============================================================
-# STEP 5 — Claude Code
+# STEP 6 — Claude Code
 # ============================================================
-section "Step 5/6 — Claude Code"
+section "Step 6/7 — Claude Code"
 
 if command -v claude &> /dev/null; then
     if confirm "Claude Code is already installed. Update it to the latest version?"; then
@@ -165,9 +196,9 @@ else
 fi
 
 # ============================================================
-# STEP 6 — Directory Setup + Clone + Global Skills
+# STEP 7 — Directory Setup + Clone + Global Skills
 # ============================================================
-section "Step 6/6 — Setting up workspace"
+section "Step 7/7 — Setting up workspace"
 
 if confirm "Set up the 1mg PM Toolkit workspace and clone the toolkit repo?"; then
     mkdir -p "$INSTALL_DIR"
@@ -178,7 +209,11 @@ if confirm "Set up the 1mg PM Toolkit workspace and clone the toolkit repo?"; th
         ok "Toolkit updated"
     else
         info "Cloning toolkit from GitHub..."
-        git clone --quiet "$GITHUB_REPO" "$TOOLKIT_DIR"
+        if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+            gh repo clone "$GITHUB_REPO" "$TOOLKIT_DIR" -- --quiet
+        else
+            git clone --quiet "https://github.com/${GITHUB_REPO}.git" "$TOOLKIT_DIR"
+        fi
         ok "Toolkit cloned"
     fi
 
