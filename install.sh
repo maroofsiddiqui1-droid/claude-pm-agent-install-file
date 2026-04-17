@@ -15,11 +15,13 @@ BOLD='\033[1m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+CYAN='\033[0;36m'
 RESET='\033[0m'
 
-ok()   { echo -e "  ${GREEN}✓${RESET} $1"; }
-info() { echo -e "  ${YELLOW}→${RESET} $1"; }
-fail() { echo -e "  ${RED}✗${RESET} $1"; exit 1; }
+ok()      { echo -e "  ${GREEN}✓${RESET} $1"; }
+info()    { echo -e "  ${YELLOW}→${RESET} $1"; }
+fail()    { echo -e "  ${RED}✗${RESET} $1"; exit 1; }
+skipped() { echo -e "  ${CYAN}⤼${RESET} $1 — skipped"; }
 section() { echo -e "\n${BOLD}$1${RESET}"; }
 
 # ---- Config ------------------------------------------------
@@ -31,10 +33,22 @@ GLOBAL_CLAUDE_DIR="$HOME/.claude"
 GLOBAL_CLAUDE_MD="$GLOBAL_CLAUDE_DIR/CLAUDE.md"
 TOOLKIT_MARKER="# 1mg PM Toolkit (auto-installed)"
 
+# ---- Confirm helper ----------------------------------------
+# Reads from /dev/tty so it works even when piped via curl | bash
+confirm() {
+    local prompt="$1"
+    local answer
+    echo -e "  ${CYAN}?${RESET} ${prompt} [y/n]: \c" > /dev/tty
+    read -r answer < /dev/tty
+    [[ "$answer" =~ ^[Yy]$ ]]
+}
+
 echo ""
 echo -e "${BOLD}============================================${RESET}"
 echo -e "${BOLD}  1mg Claude PM Toolkit — Installer        ${RESET}"
 echo -e "${BOLD}============================================${RESET}"
+echo ""
+echo -e "  You'll be asked before each step. Press ${BOLD}y${RESET} to install, ${BOLD}n${RESET} to skip."
 echo ""
 
 # ============================================================
@@ -45,19 +59,22 @@ section "Step 1/6 — Homebrew"
 if command -v brew &> /dev/null; then
     ok "Homebrew already installed"
 else
-    info "Installing Homebrew (you may be asked for your Mac password)..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    if confirm "Homebrew is not installed. Install it now?"; then
+        info "Installing Homebrew (you may be asked for your Mac password)..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-    # Add brew to PATH — works for both Apple Silicon (/opt/homebrew) and Intel (/usr/local)
-    if [[ -f "/opt/homebrew/bin/brew" ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
-    elif [[ -f "/usr/local/bin/brew" ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
+        if [[ -f "/opt/homebrew/bin/brew" ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
+        elif [[ -f "/usr/local/bin/brew" ]]; then
+            eval "$(/usr/local/bin/brew shellenv)"
+        else
+            fail "Homebrew installation failed. Please install manually from https://brew.sh and re-run."
+        fi
+        ok "Homebrew installed"
     else
-        fail "Homebrew installation failed. Please install manually from https://brew.sh and re-run."
+        skipped "Homebrew"
     fi
-    ok "Homebrew installed"
 fi
 
 # ============================================================
@@ -73,14 +90,21 @@ if command -v node &> /dev/null; then
     if [ "$NODE_MAJOR" -ge "$MIN_NODE_MAJOR" ]; then
         ok "Node.js $NODE_VERSION already installed"
     else
-        info "Node.js $NODE_VERSION is too old (need v$MIN_NODE_MAJOR+). Upgrading..."
-        brew upgrade node || brew install node
-        ok "Node.js upgraded"
+        if confirm "Node.js $NODE_VERSION is too old (need v$MIN_NODE_MAJOR+). Upgrade it?"; then
+            brew upgrade node || brew install node
+            ok "Node.js upgraded"
+        else
+            skipped "Node.js upgrade"
+        fi
     fi
 else
-    info "Installing Node.js..."
-    brew install node
-    ok "Node.js installed"
+    if confirm "Node.js is not installed. Install it now?"; then
+        info "Installing Node.js..."
+        brew install node
+        ok "Node.js installed"
+    else
+        skipped "Node.js"
+    fi
 fi
 
 # ============================================================
@@ -91,9 +115,13 @@ section "Step 3/6 — Git"
 if command -v git &> /dev/null; then
     ok "Git already installed ($(git --version))"
 else
-    info "Installing Git..."
-    brew install git
-    ok "Git installed"
+    if confirm "Git is not installed. Install it now?"; then
+        info "Installing Git..."
+        brew install git
+        ok "Git installed"
+    else
+        skipped "Git"
+    fi
 fi
 
 # ============================================================
@@ -104,9 +132,13 @@ section "Step 4/6 — VS Code"
 if command -v code &> /dev/null; then
     ok "VS Code already installed"
 else
-    info "Installing VS Code..."
-    brew install --cask visual-studio-code
-    ok "VS Code installed"
+    if confirm "VS Code is not installed. Install it now?"; then
+        info "Installing VS Code..."
+        brew install --cask visual-studio-code
+        ok "VS Code installed"
+    else
+        skipped "VS Code"
+    fi
 fi
 
 # ============================================================
@@ -115,13 +147,21 @@ fi
 section "Step 5/6 — Claude Code"
 
 if command -v claude &> /dev/null; then
-    info "Claude Code already installed. Updating to latest..."
-    npm update -g @anthropic-ai/claude-code 2>/dev/null || true
-    ok "Claude Code up to date"
+    if confirm "Claude Code is already installed. Update it to the latest version?"; then
+        info "Updating Claude Code..."
+        npm update -g @anthropic-ai/claude-code 2>/dev/null || true
+        ok "Claude Code up to date"
+    else
+        skipped "Claude Code update"
+    fi
 else
-    info "Installing Claude Code..."
-    npm install -g @anthropic-ai/claude-code
-    ok "Claude Code installed"
+    if confirm "Claude Code is not installed. Install it now?"; then
+        info "Installing Claude Code..."
+        npm install -g @anthropic-ai/claude-code
+        ok "Claude Code installed"
+    else
+        skipped "Claude Code"
+    fi
 fi
 
 # ============================================================
@@ -129,36 +169,36 @@ fi
 # ============================================================
 section "Step 6/6 — Setting up workspace"
 
-# Create base directory
-mkdir -p "$INSTALL_DIR"
+if confirm "Set up the 1mg PM Toolkit workspace and clone the toolkit repo?"; then
+    mkdir -p "$INSTALL_DIR"
 
-# Clone or update the toolkit
-if [ -d "$TOOLKIT_DIR/.git" ]; then
-    info "Toolkit already exists. Pulling latest updates..."
-    git -C "$TOOLKIT_DIR" pull --quiet
-    ok "Toolkit updated"
+    if [ -d "$TOOLKIT_DIR/.git" ]; then
+        info "Toolkit already exists. Pulling latest updates..."
+        git -C "$TOOLKIT_DIR" pull --quiet
+        ok "Toolkit updated"
+    else
+        info "Cloning toolkit from GitHub..."
+        git clone --quiet "$GITHUB_REPO" "$TOOLKIT_DIR"
+        ok "Toolkit cloned"
+    fi
+
+    mkdir -p "$WORKSPACE_DIR"
+    ok "Workspace folder ready: ~/1mg-claude-code/claude-workspace"
+
+    mkdir -p "$GLOBAL_CLAUDE_DIR"
+    touch "$GLOBAL_CLAUDE_MD"
+
+    if grep -qF "$TOOLKIT_MARKER" "$GLOBAL_CLAUDE_MD" 2>/dev/null; then
+        ok "Skills already registered globally — no changes needed"
+    else
+        {
+            printf "\n%s\n" "$TOOLKIT_MARKER"
+            printf "@%s/CLAUDE.md\n" "$TOOLKIT_DIR"
+        } >> "$GLOBAL_CLAUDE_MD"
+        ok "Skills registered globally in ~/.claude/CLAUDE.md"
+    fi
 else
-    info "Cloning toolkit from GitHub..."
-    git clone --quiet "$GITHUB_REPO" "$TOOLKIT_DIR"
-    ok "Toolkit cloned"
-fi
-
-# Create empty workspace folder
-mkdir -p "$WORKSPACE_DIR"
-ok "Workspace folder ready: ~/1mg-claude-code/claude-workspace"
-
-# Register skills globally in ~/.claude/CLAUDE.md
-mkdir -p "$GLOBAL_CLAUDE_DIR"
-touch "$GLOBAL_CLAUDE_MD"
-
-if grep -qF "$TOOLKIT_MARKER" "$GLOBAL_CLAUDE_MD" 2>/dev/null; then
-    ok "Skills already registered globally — no changes needed"
-else
-    {
-        printf "\n%s\n" "$TOOLKIT_MARKER"
-        printf "@%s/CLAUDE.md\n" "$TOOLKIT_DIR"
-    } >> "$GLOBAL_CLAUDE_MD"
-    ok "Skills registered globally in ~/.claude/CLAUDE.md"
+    skipped "Workspace setup"
 fi
 
 # ============================================================
