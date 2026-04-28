@@ -1,0 +1,23 @@
+install.sh
+  e0e27c86dbee3a02 28,128,130,132-133,135-139,141,198-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "834e2f3912e53bfba3bc6b56bc7720797627bb0b",
+  "prompts": {
+    "e0e27c86dbee3a02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2062ebc4-24eb-405c-82d7-de528d84f32e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Maroof Siddiqui",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 30,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    }
+  }
+}
