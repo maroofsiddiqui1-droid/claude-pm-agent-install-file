@@ -25,7 +25,7 @@ skipped() { echo -e "  ${CYAN}⤼${RESET} $1 — skipped"; }
 section() { echo -e "\n${BOLD}$1${RESET}"; }
 
 # ---- Config ------------------------------------------------
-GITHUB_REPO="maroofsiddiqui1-droid/1mg-claude-code-toolkit"
+BITBUCKET_REPO="https://bitbucket.org/tata1mg/claude-code-agent.git"
 INSTALL_DIR="$HOME/1mg-claude-code"
 TOOLKIT_DIR="$INSTALL_DIR/claude-pm-toolkit"
 WORKSPACE_DIR="$INSTALL_DIR/claude-workspace"
@@ -125,33 +125,20 @@ else
 fi
 
 # ============================================================
-# STEP 4 — GitHub CLI (gh)
+# STEP 4 — Git Credential Manager (Bitbucket OAuth)
 # ============================================================
-section "Step 4/7 — GitHub CLI"
+section "Step 4/7 — Git Credential Manager"
 
-if command -v gh &> /dev/null; then
-    ok "GitHub CLI already installed ($(gh --version | head -1))"
-    if ! gh auth status &> /dev/null; then
-        if confirm "GitHub CLI is installed but you're not logged in. Log in now?"; then
-            info "Opening GitHub in your browser to authenticate..."
-            gh auth login --web < /dev/tty
-            ok "GitHub authenticated"
-        else
-            skipped "GitHub login"
-        fi
-    else
-        ok "GitHub already authenticated"
-    fi
+if git credential-manager --version &> /dev/null; then
+    ok "Git Credential Manager already installed ($(git credential-manager --version 2>&1 | head -1))"
 else
-    if confirm "GitHub CLI is not installed. Install and log in now? (needed to clone the private toolkit repo)"; then
-        info "Installing GitHub CLI..."
-        brew install gh
-        ok "GitHub CLI installed"
-        info "Opening GitHub in your browser to authenticate..."
-        gh auth login --web < /dev/tty
-        ok "GitHub authenticated"
+    if confirm "Git Credential Manager is not installed. Install it now? (needed for browser-based Bitbucket login when cloning the toolkit)"; then
+        info "Installing Git Credential Manager..."
+        brew install --cask git-credential-manager
+        ok "Git Credential Manager installed"
+        info "When the toolkit is cloned in Step 7, your browser will open to authenticate with Bitbucket."
     else
-        skipped "GitHub CLI"
+        skipped "Git Credential Manager"
     fi
 fi
 
@@ -208,12 +195,8 @@ if confirm "Set up the 1mg PM Toolkit workspace and clone the toolkit repo?"; th
         git -C "$TOOLKIT_DIR" pull --quiet
         ok "Toolkit updated"
     else
-        info "Cloning toolkit from GitHub..."
-        if command -v gh &> /dev/null && gh auth status &> /dev/null; then
-            gh repo clone "$GITHUB_REPO" "$TOOLKIT_DIR" -- --quiet
-        else
-            git clone --quiet "https://github.com/${GITHUB_REPO}.git" "$TOOLKIT_DIR"
-        fi
+        info "Cloning toolkit from Bitbucket (your browser may open to authenticate)..."
+        git clone --quiet "$BITBUCKET_REPO" "$TOOLKIT_DIR"
         ok "Toolkit cloned"
     fi
 
